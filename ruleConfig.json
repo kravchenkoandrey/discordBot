@@ -1,0 +1,40 @@
+{
+    "globalMessageProcessRule":
+    {
+        "excludedAuthors":
+        [
+            "609066316325715998"
+        ]
+    },
+    "messageProcessRules":
+    [
+        {
+            "msgHandler": "payPointsForMessage",
+            "filters":
+            {
+
+            }
+        },
+        {
+            "msgHandler": "showPoints",
+            "filters":
+            {
+                "contentCS": "!моипоинты"
+            }
+        },
+        {
+            "msgHandler": "writeEmbed",
+            "filters":
+            {
+                "beginSubstringCI": "!embed "
+            }
+        },
+        {
+            "msgHandler": "writeDeleteEmbed",
+            "filters":
+            {
+                "beginSubstringCS": "!embedClear "
+            }
+        }
+    ]
+}
