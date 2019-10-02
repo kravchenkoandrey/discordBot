@@ -26,6 +26,7 @@ Client.on('disconnect', () => {
 Client.on('error', console.error);
 
 Client.on('message', msg => {
+    handlers.regularHandlers["checkVoiseChannelsForUsers"](msg.guild);
     // var re = new Discord.RichEmbed()
     // .setTitle("Тест Embed")
     // .setColor(0xff0000)
@@ -51,7 +52,7 @@ Client.on('message', msg => {
                 // console.log(element.msgHandler);
                 // msg.channel.send(element.msgHandler);
                 try {
-                    handlers[element.msgHandler](msg);   
+                    handlers.messageHandlers[element.msgHandler](msg);   
                 } catch (error) {
                     console.log(error);  
                     console.log(`Handler: ${handlers.msgHandler}`);      

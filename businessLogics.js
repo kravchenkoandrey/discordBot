@@ -1,8 +1,13 @@
 const DBSettings = require('./dbSettings');
 const Discord = new require("discord.js");
 
+const messageHandlers = new Object();
+const regularHandlers = new Object();
 
-module.exports.payPointsForMessage =  function(message){
+module.exports.messageHandlers = messageHandlers;
+module.exports.regularHandlers = regularHandlers;
+
+messageHandlers.payPointsForMessage =  function(message){
     var userID = message.author.id;
     var guildID = message.guild.id;
     var user = {"userID": userID, "guildID": guildID};
@@ -18,7 +23,7 @@ module.exports.payPointsForMessage =  function(message){
     })
 }
 
-module.exports.showPoints =  function(message){
+messageHandlers.showPoints =  function(message){
     var userID = message.author.id;
     var guildID = message.guild.id;
     var user = {"userID": userID, "guildID": guildID};
@@ -34,7 +39,7 @@ module.exports.showPoints =  function(message){
     })
 }
 
-module.exports.writeEmbed = function(message){
+messageHandlers.writeEmbed = function(message){
     var params = new Array();
     var startPoint = message.content.indexOf(" ");
     var remaining = message.content;
@@ -78,7 +83,19 @@ module.exports.writeEmbed = function(message){
     message.channel.send(embed);
 }
 
-module.exports.writeDeleteEmbed = function(message){
-    module.exports.writeEmbed(message);
+messageHandlers.writeDeleteEmbed = function(message){
+    messageHandlers.writeEmbed(message);
     message.delete();
+}
+
+regularHandlers.checkVoiseChannelsForUsers = function(guild){
+    var count = 0;
+    voiceChannelsArray = guild.channels.filter((channel) =>{
+        return channel.type == "voice" && channel.id != guild.afkChannelID;
+    }).array();
+    for (var i = 0; i < voiceChannelsArray.length; i++){
+        // console.log(voiceChannelsArray[i].members.size);
+        count += voiceChannelsArray[i].members.size;
+    }
+    console.log(count);
 }
