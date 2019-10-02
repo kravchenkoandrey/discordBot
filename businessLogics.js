@@ -88,7 +88,7 @@ messageHandlers.writeDeleteEmbed = function(message){
     message.delete();
 }
 
-regularHandlers.checkVoiseChannelsForUsers = function(guild){
+regularHandlers.checkVoiceChannelsForMembers = function(guild){
     var count = 0;
     voiceChannelsArray = guild.channels.filter((channel) =>{
         return channel.type == "voice" && channel.id != guild.afkChannelID;

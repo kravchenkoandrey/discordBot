@@ -1,40 +1,51 @@
 {
-    "globalMessageProcessRule":
+    "messageProcessRules":
     {
-        "excludedAuthors":
+        "globalMessageProcessRule":
+        {
+            "excludedAuthors":
+            [
+                "609066316325715998"
+            ]
+        },
+        "localMessageProcessRules":
         [
-            "609066316325715998"
+            {
+                "msgHandler": "payPointsForMessage",
+                "filters":
+                {
+
+                }
+            },
+            {
+                "msgHandler": "showPoints",
+                "filters":
+                {
+                    "contentCS": "!моипоинты"
+                }
+            },
+            {
+                "msgHandler": "writeEmbed",
+                "filters":
+                {
+                    "beginSubstringCI": "!embed "
+                }
+            },
+            {
+                "msgHandler": "writeDeleteEmbed",
+                "filters":
+                {
+                    "beginSubstringCS": "!embedClear "
+                }
+            }
         ]
     },
-    "messageProcessRules":
+    "regularExecutorRules":
     [
         {
-            "msgHandler": "payPointsForMessage",
-            "filters":
-            {
-
-            }
-        },
-        {
-            "msgHandler": "showPoints",
-            "filters":
-            {
-                "contentCS": "!моипоинты"
-            }
-        },
-        {
-            "msgHandler": "writeEmbed",
-            "filters":
-            {
-                "beginSubstringCI": "!embed "
-            }
-        },
-        {
-            "msgHandler": "writeDeleteEmbed",
-            "filters":
-            {
-                "beginSubstringCS": "!embedClear "
-            }
+            "handler": "checkVoiceChannelsForMembers",
+            "guildId": "555424031285968907",
+            "interval": 6000
         }
     ]
 }
