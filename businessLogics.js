@@ -11,93 +11,13 @@ messageHandlers.payPoints =  function(message){
     var userID = message.author.id;
     var guildID = message.guild.id;
     var user = {"userID": userID, "guildID": guildID};
-    var users = DBSettings.db.collection('users');
-    users.findOne(user, (err, result) => {
-        if(err){
-            console.log(err);
-        }
-        else if (!result){
-            users.insertOne(user, (err, result) => {
-                if(err){
-                    if(err.code == 11000){
-                        messageHandlers.payPoints(message);    
-                    }
-                    else{
-                        console.log(err); 
-                    }
-                }
-                else{
-                    messageHandlers.payPoints(message);
-                }    
-            });
-        }
-        else{
-            if (result.points == undefined){
-                users.findOneAndUpdate(user, {$set:{"points": 0}}, (err) => {
-                    if(err){
-                        console.log(err);
-                    }
-                    else{
-                        messageHandlers.payPoints(message); 
-                    }   
-                });                
-            }
-            else{
-                users.findOneAndUpdate(user, {$set:{"points":result.points+1}}, (err) => {
-                    if(err){
-                        console.log(err);
-                    }
-                })
-            }
-        }
-    })
+    readAndModifyUserField(user, "points", 0, increasePointsValue);
 }
 
 function payXP(userID, guildID){
-    // console.log("payXP executed");
     var user = {"userID": userID, "guildID": guildID};
     var users = DBSettings.db.collection('users');
-    users.findOne(user, (err, result) => {
-        if(err){
-            console.log(err);
-        }
-        else if (!result){
-            console.log("No result");
-            users.insertOne(user, (err, result) => {
-                if(err){
-                    if(err.code == 11000){
-                        payXP(userID, guildID);    
-                    }
-                    else{
-                        console.log(err); 
-                    }
-                }
-                else{
-                    payXP(userID, guildID);
-                }    
-            });
-        }
-        else{
-            if (result.xp == undefined){
-                console.log("No xp");
-                users.findOneAndUpdate(user, {$set:{"xp": 0}}, (err) => {
-                    if(err){
-                        console.log(err);
-                    }
-                    else{
-                        payXP(userID, guildID); 
-                    }   
-                });                
-            }
-            else{
-                users.findOneAndUpdate(user, {$set:{"xp":result.xp+1}}, (err) => {
-                    if(err){
-                        console.log(err);
-                    }
-                })
-            }
-        }
-    })
+    readAndModifyUserField(user, "xp", 0, increaseXPValue);
 }
 
 messageHandlers.showPoints = function(message){
@@ -107,11 +27,105 @@ messageHandlers.showPoints = function(message){
     readAndModifyUserField(user, "points", 0, replyWithPointsValue, message);
 }
 
+messageHandlers.showXP = function(message){
+    var userID = message.author.id;
+    var guildID = message.guild.id;
+    var user = {"userID": userID, "guildID": guildID};
+    readAndModifyUserField(user, "xp", 0, replyWithXPValue, message); 
+}
+
+function increaseXPValue(reqResult){
+    var users = DBSettings.db.collection('users');
+    var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
+    return users.findOneAndUpdate(user, {$set:{"xp":reqResult.xp + 1}});
+}
+
+function increasePointsValue(reqResult){
+    var users = DBSettings.db.collection('users');
+    var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
+    return users.findOneAndUpdate(user, {$set:{"points":reqResult.points + 1}});
+}
+
+function replyWithXPValue(reqResult, message){
+    var promise = new Promise((resolve, reject) => {
+        message.reply(`твой опыт: ${reqResult.xp}`);
+        resolve();
+    });
+    return promise;
+}
+
 function replyWithPointsValue(reqResult, message){
-    message.reply(`твои поинты: ${reqResult.points}`);
+    var promise = new Promise((resolve, reject) => {
+        message.reply(`твои поинты: ${reqResult.points}`);
+        resolve();
+    });
+    return promise;
+}
+
+function readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter){    
+//ищет поле "fieldName" пользователя "user" и вызывает колбэк для его обработки с доп. параметром "callbackParameter"
+//если пользователь не найден, создаёт нового
+//если поле не найдено, инициализирует его у пользователя со значением "initialValue"
+    var userIndex = {userID: user.userID, guildID: user.guildID};
+    var users = DBSettings.db.collection('users');
+    users.findOne(userIndex, (err, result) => { //поиск пользователя
+        if(err){
+            console.log(err);
+        }
+        else if (!result){  
+        //если не найден пользователь
+            users.insertOne(userIndex, (err) => { 
+                if (err){
+                    if(err.code == 11000){
+                        readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);    
+                    }
+                    else{
+                        console.log(err); 
+                    }
+                }
+                else{
+                    readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);
+                }   
+            });
+        }   
+        else{   
+        //если пользователь найден
+            if(result[fieldName] == undefined){ 
+            //если поле не определено
+                var updatingField = new Object();
+                updatingField[fieldName] = initialValue;
+                users.findOneAndUpdate(userIndex, {$set: updatingField}, (err) => { //установить начальное значение поля
+                    if (err){
+                        console.log(err); 
+                    }
+                    else{
+                        readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter); 
+                    }
+                })
+            }
+            else{   
+            //если поле определено
+                users.findOne(userIndex, (err, result) => {
+                    if (err){
+                        console.log(err); 
+                    }
+                    else{
+                        callback(result, callbackParameter).catch((err) => {    
+                        //модифицировать поле
+                            console.log(`readAndModifyUserField: Error executing callback "${callback}":\n${err}`);
+                            if(err.code == 11000){
+                                readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);    
+                            }
+                        });    
+                    }
+                })
+            }
+        }
+    }) 
 }
 
 messageHandlers.writeEmbed = function(message){
+    var embed = new Discord.RichEmbed();
     var params = new Array();
     var startPoint = message.content.indexOf(" ");
     var remaining = message.content;
@@ -124,7 +138,6 @@ messageHandlers.writeEmbed = function(message){
         params[i] = remaining.slice(0, endPoint);
         startPoint = endPoint;
     }
-    var embed = new Discord.RichEmbed();
     if (params[0]){
         embed.setTitle(params[0]);
     }
@@ -136,7 +149,7 @@ messageHandlers.writeEmbed = function(message){
             embed.setColor(Number(params[1]));
         }
         catch{
-            console.log("Unable to convert color parameter to number")
+            console.log("Unable to convert the color parameter to a number")
         }
     }
     if (params[2]){
@@ -159,68 +172,6 @@ messageHandlers.writeDeleteEmbed = function(message){
     messageHandlers.writeEmbed(message);
     message.delete();
 }
-
-function readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter){
-    var userIndex = {userID: user.userID, guildID: user.guildID};
-    var users = DBSettings.db.collection('users');
-    users.findOne(userIndex, (err, result) => {
-        if(err){
-            console.log(err);
-        }
-        else if (!result){
-            users.insertOne(userIndex, (err) => { 
-                if (err){
-                    if(err.code == 11000){
-                        readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);    
-                    }
-                    else{
-                        console.log(err); 
-                    }
-                }
-                else{
-                    readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);
-                }   
-            });
-        }
-        else{
-            if(result[fieldName] == undefined){
-                var updatingField = new Object();
-                updatingField[fieldName] = initialValue;
-                users.findOneAndUpdate(userIndex, {$set: updatingField}, (err) => {
-                    if (err){
-                        console.log(err); 
-                    }
-                    else{
-                        readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);
-                    }
-                })
-            }
-            else{
-                users.findOne(userIndex, (err, result) => {
-                    if (err){
-                        console.log(err); 
-                    }
-                    else{
-                        callback(result, callbackParameter);
-                    }
-                })
-            }
-        }
-    }) 
-}
-
-function replyWithXPValue(reqResult, message){
-    message.reply(`твой опыт: ${reqResult.xp}`)
-}
-
-messageHandlers.showXP = function(message){
-    var userID = message.author.id;
-    var guildID = message.guild.id;
-    var user = {"userID": userID, "guildID": guildID};
-    readAndModifyUserField(user, "xp", 0, replyWithXPValue, message); 
-}
-
-
 
 regularHandlers.checkVoiceChannelsForMembers = function(guild){
     var users = DBSettings.db.collection('users');
