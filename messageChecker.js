@@ -9,6 +9,15 @@ var checkMsgByRuleElement = function(message, key, value){
                 }
             })
             return result;
+        case "guildIDs":    //ID гильдии сообщения соответствует одному из значений массива guildIDs
+            result = false;
+            value.forEach(element => {
+                if (message.guild.id == element){
+                    result = true;
+                    return;
+                }
+            })
+            return result;
         case "excludedAuthors":    //ID автора сообщения не соответствует ни одному из значений массива excludedAuthors
             result = true;
             value.forEach(element => {

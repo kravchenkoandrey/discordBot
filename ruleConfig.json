@@ -21,14 +21,14 @@
                 "msgHandler": "showPoints",
                 "filters":
                 {
-                    "contentCS": "!моипоинты"
+                    "contentCS": "!points"
                 }
             },
             {
                 "msgHandler": "showXP",
                 "filters":
                 {
-                    "contentCS": "!мойопыт"
+                    "contentCS": "!xp"
                 }
             },
             {

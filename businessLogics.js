@@ -1,5 +1,6 @@
 const DBSettings = require('./dbSettings');
-const Discord = new require("discord.js");
+const Discord = require("discord.js");
+const economySettings = require("./economySettings");
 
 const messageHandlers = new Object();
 const regularHandlers = new Object();
@@ -7,37 +8,42 @@ const regularHandlers = new Object();
 module.exports.messageHandlers = messageHandlers;
 module.exports.regularHandlers = regularHandlers;
 
+
 messageHandlers.payPoints =  function(message){
     var userID = message.author.id;
     var guildID = message.guild.id;
     var user = {"userID": userID, "guildID": guildID};
-    readAndModifyUserField(user, "points", 0, increasePointsValue);
+    readOrModifyUserField(user, "points", 0, increasePointsValue);
 }
 
 function payXP(userID, guildID){
     var user = {"userID": userID, "guildID": guildID};
     var users = DBSettings.db.collection('users');
-    readAndModifyUserField(user, "xp", 0, increaseXPValue);
+    readOrModifyUserField(user, "xp", 0, increaseXPValue);
 }
 
 messageHandlers.showPoints = function(message){
     var userID = message.author.id;
     var guildID = message.guild.id;
     var user = {"userID": userID, "guildID": guildID};
-    readAndModifyUserField(user, "points", 0, replyWithPointsValue, message);
+    readOrModifyUserField(user, "points", 0, replyWithPointsValue, message);
 }
 
 messageHandlers.showXP = function(message){
     var userID = message.author.id;
     var guildID = message.guild.id;
     var user = {"userID": userID, "guildID": guildID};
-    readAndModifyUserField(user, "xp", 0, replyWithXPValue, message); 
+    readOrModifyUserField(user, "xp", 0, replyWithXPValue, message); 
 }
 
 function increaseXPValue(reqResult){
     var users = DBSettings.db.collection('users');
     var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
-    return users.findOneAndUpdate(user, {$set:{"xp":reqResult.xp + 1}});
+    promise = users.findOneAndUpdate(user, {$set:{"xp":reqResult.xp + 1}});
+    promise.then(() => {
+        readOrModifyUserField(user, "lvl", 0, updateLvl);
+    });
+    return promise;
 }
 
 function increasePointsValue(reqResult){
@@ -62,13 +68,41 @@ function replyWithPointsValue(reqResult, message){
     return promise;
 }
 
-function readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter){    
+function updateLvl(reqResult){
+    var users = DBSettings.db.collection('users');
+    var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
+    calculatedLevel = calculateLevel(reqResult.xp);
+    var promise = new Promise((resolve, reject) => {
+        resolve();
+    });
+    if (reqResult.lvl != calculatedLevel){
+        promise = users.findOneAndUpdate(user, {$set:{"lvl": calculatedLevel}});
+    }
+    return promise;
+}
+
+function calculateLevel(xp){
+    var lvlSettings = economySettings.levelingSettings;
+    var price = lvlSettings.basePricePerLvl;
+    var lvl = 0;
+    while(xp >= price && lvl < lvlSettings.maxLvl){
+        lvl++;
+        xp -= price;
+        if(lvl % lvlSettings.priceIncreaseLvlInterval == 0){
+            price += lvlSettings.priceIncreaseValue;
+        }
+    }
+    return lvl;
+}
+
+function readOrModifyUserField(userIndex, fieldName, initialValue, callback, callbackParameter){    
 //ищет поле "fieldName" пользователя "user" и вызывает колбэк для его обработки с доп. параметром "callbackParameter"
 //если пользователь не найден, создаёт нового
 //если поле не найдено, инициализирует его у пользователя со значением "initialValue"
-    var userIndex = {userID: user.userID, guildID: user.guildID};
+    var userIndex = {userID: userIndex.userID, guildID: userIndex.guildID};
     var users = DBSettings.db.collection('users');
-    users.findOne(userIndex, (err, result) => { //поиск пользователя
+    users.findOne(userIndex, (err, result) => { 
+        //поиск пользователя
         if(err){
             console.log(err);
         }
@@ -77,14 +111,14 @@ function readAndModifyUserField(user, fieldName, initialValue, callback, callbac
             users.insertOne(userIndex, (err) => { 
                 if (err){
                     if(err.code == 11000){
-                        readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);    
+                        readOrModifyUserField(userIndex, fieldName, initialValue, callback, callbackParameter);    
                     }
                     else{
                         console.log(err); 
                     }
                 }
                 else{
-                    readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);
+                    readOrModifyUserField(userIndex, fieldName, initialValue, callback, callbackParameter);
                 }   
             });
         }   
@@ -94,12 +128,13 @@ function readAndModifyUserField(user, fieldName, initialValue, callback, callbac
             //если поле не определено
                 var updatingField = new Object();
                 updatingField[fieldName] = initialValue;
-                users.findOneAndUpdate(userIndex, {$set: updatingField}, (err) => { //установить начальное значение поля
+                users.findOneAndUpdate(userIndex, {$set: updatingField}, (err) => { 
+                //установить начальное значение поля
                     if (err){
                         console.log(err); 
                     }
                     else{
-                        readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter); 
+                        readOrModifyUserField(userIndex, fieldName, initialValue, callback, callbackParameter); 
                     }
                 })
             }
@@ -114,7 +149,7 @@ function readAndModifyUserField(user, fieldName, initialValue, callback, callbac
                         //модифицировать поле
                             console.log(`readAndModifyUserField: Error executing callback "${callback}":\n${err}`);
                             if(err.code == 11000){
-                                readAndModifyUserField(user, fieldName, initialValue, callback, callbackParameter);    
+                                readOrModifyUserField(userIndex, fieldName, initialValue, callback, callbackParameter);    
                             }
                         });    
                     }

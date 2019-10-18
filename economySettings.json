@@ -1,0 +1,8 @@
+{
+    "levelingSettings": {
+        "basePricePerLvl": 10,
+        "priceIncreaseValue": 10,
+        "priceIncreaseLvlInterval": 1,
+        "maxLvl": 25
+    }
+}
