@@ -1,34 +1,35 @@
 "use strict";
 
 const Discord = require('discord.js');
-const Client = new Discord.Client();
 const loginInfo = require('./loginInfo.json');
 const rules = require('./ruleConfig.json').messageProcessRules;
 const handlers = require("./businessLogics");
 const messageChecker = require('./messageChecker');
-const DBSettings = require('./dbSettings');
+const globalSettings = require('./globalSettings');
 const regularExecutor = require('./regularExecutor.js');
 
 const MongoClient = require("mongodb").MongoClient; 
 const url = "mongodb://localhost:27017/";
 const DBClient = new MongoClient(url, {useNewUrlParser: true, useUnifiedTopology: true});
 
-Client.on('ready', () => {
-    console.log(`Logged in as ${Client.user.tag}!`);
-    regularExecutor.run(Client.guilds); 
+globalSettings.client = new Discord.Client();
+
+globalSettings.client.on('ready', () => {
+    console.log(`Logged in as ${globalSettings.client.user.tag}!`);
+    regularExecutor.run(globalSettings.client.guilds); 
 });
 
-Client.on('disconnect', () => {
-    console.log(`Logging out as ${Client.user.tag}!`);
+globalSettings.client.on('disconnect', () => {
+    console.log(`Logging out as ${globalSettings.client.user.tag}!`);
     DBClient.close();
     console.log(`Disconnected from database`);
 });
 
-Client.on('error', console.error);
+globalSettings.client.on('error', console.error);
 
-Client.on('message', msg => {
+globalSettings.client.on('message', msg => {
 
-    const collection = DBSettings.db.collection("users");
+    const collection = globalSettings.db.collection("users");
 
     if (messageChecker.checkMessageByRule(msg, rules.globalMessageProcessRule)){
         rules.localMessageProcessRules.forEach(element => {
@@ -47,8 +48,8 @@ Client.on('message', msg => {
 
 DBClient.connect((err, mongoClient) => 
 {
-    DBSettings.db = mongoClient.db(DBSettings.dbConfig.dbName);
-    Client.login(loginInfo.token);
+    globalSettings.db = mongoClient.db(globalSettings.dbConfig.dbName);
+    globalSettings.client.login(loginInfo.token);
     console.log("Successfully connected to database");
 });
 

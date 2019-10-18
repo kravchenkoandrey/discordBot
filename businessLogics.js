@@ -1,6 +1,7 @@
-const DBSettings = require('./dbSettings');
+const globalSettings = require('./globalSettings');
 const Discord = require("discord.js");
 const economySettings = require("./economySettings");
+const guildSettings = require("./guildSettings");
 
 const messageHandlers = new Object();
 const regularHandlers = new Object();
@@ -18,7 +19,7 @@ messageHandlers.payPoints =  function(message){
 
 function payXP(userID, guildID){
     var user = {"userID": userID, "guildID": guildID};
-    var users = DBSettings.db.collection('users');
+    var users = globalSettings.db.collection('users');
     readOrModifyUserField(user, "xp", 0, increaseXPValue);
 }
 
@@ -37,7 +38,7 @@ messageHandlers.showXP = function(message){
 }
 
 function increaseXPValue(reqResult){
-    var users = DBSettings.db.collection('users');
+    var users = globalSettings.db.collection('users');
     var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
     promise = users.findOneAndUpdate(user, {$set:{"xp":reqResult.xp + 1}});
     promise.then(() => {
@@ -47,7 +48,7 @@ function increaseXPValue(reqResult){
 }
 
 function increasePointsValue(reqResult){
-    var users = DBSettings.db.collection('users');
+    var users = globalSettings.db.collection('users');
     var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
     return users.findOneAndUpdate(user, {$set:{"points":reqResult.points + 1}});
 }
@@ -69,14 +70,26 @@ function replyWithPointsValue(reqResult, message){
 }
 
 function updateLvl(reqResult){
-    var users = DBSettings.db.collection('users');
+    var users = globalSettings.db.collection('users');
     var user = {"userID": reqResult.userID, "guildID": reqResult.guildID};
     calculatedLevel = calculateLevel(reqResult.xp);
     var promise = new Promise((resolve, reject) => {
-        resolve();
+        if(true){
+            resolve();
+        }
+        else{
+            reject();
+        }
     });
     if (reqResult.lvl != calculatedLevel){
-        promise = users.findOneAndUpdate(user, {$set:{"lvl": calculatedLevel}});
+        promise = users.updateOne(user, {$set:{"lvl": calculatedLevel}});
+        promise.then((reqResult) => {
+            users.findOne({userID: user.userID, guildID: user.guildID}, (err, reqResult) => {
+                var promotedUser = globalSettings.client.guilds.get(reqResult.guildID).members.get(reqResult.userID);
+                var channel = globalSettings.client.channels.get(guildSettings.promotionChannelId);
+                channel.send(`${promotedUser} has been promoted to level ${reqResult.lvl}!`);
+            })
+        })
     }
     return promise;
 }
@@ -100,7 +113,7 @@ function readOrModifyUserField(userIndex, fieldName, initialValue, callback, cal
 //если пользователь не найден, создаёт нового
 //если поле не найдено, инициализирует его у пользователя со значением "initialValue"
     var userIndex = {userID: userIndex.userID, guildID: userIndex.guildID};
-    var users = DBSettings.db.collection('users');
+    var users = globalSettings.db.collection('users');
     users.findOne(userIndex, (err, result) => { 
         //поиск пользователя
         if(err){
@@ -209,7 +222,7 @@ messageHandlers.writeDeleteEmbed = function(message){
 }
 
 regularHandlers.checkVoiceChannelsForMembers = function(guild){
-    var users = DBSettings.db.collection('users');
+    var users = globalSettings.db.collection('users');
     voiceChannelsArray = guild.channels.filter((channel) =>{
         return channel.type == "voice" && channel.id != guild.afkChannelID;
     }).array();
