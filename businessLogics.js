@@ -1,3 +1,5 @@
+//Код, необходимый непосредственно для выполнения команд.
+
 const globalSettings = require('./globalSettings');
 const Discord = require("discord.js");
 const economySettings = require("./economySettings");
