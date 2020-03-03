@@ -1,3 +1,5 @@
+//Код для регулярного выполнения определенных операций в фоне с заданным интервалом
+
 const config = require('./regularExecutorConfig.json');
 const executeRules = require('./ruleConfig.json').regularExecutorRules;
 const regularHandlers = require('./businessLogics.js').regularHandlers;
