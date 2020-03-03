@@ -1,3 +1,5 @@
+//Код для фильтрации сообщений и проверки, каким шаблонам команд он соответствует
+
 var checkMsgByRuleElement = function(message, key, value){
     switch (key){
         case "authorIDs":    //ID автора сообщения соответствует одному из значений массива authorIDs
