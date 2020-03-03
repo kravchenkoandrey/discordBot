@@ -1,3 +1,4 @@
+//Код, запускающий всю логику
 "use strict";
 
 const Discord = require('discord.js');
